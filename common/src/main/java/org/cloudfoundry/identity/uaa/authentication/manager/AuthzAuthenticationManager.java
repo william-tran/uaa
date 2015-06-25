@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.cloudfoundry.identity.uaa.authentication.manager;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.timgroup.statsd.StatsDClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cloudfoundry.identity.uaa.authentication.AccountNotVerifiedException;
@@ -26,10 +26,8 @@ import org.cloudfoundry.identity.uaa.authentication.event.UnverifiedUserAuthenti
 import org.cloudfoundry.identity.uaa.authentication.event.UserAuthenticationFailureEvent;
 import org.cloudfoundry.identity.uaa.authentication.event.UserAuthenticationSuccessEvent;
 import org.cloudfoundry.identity.uaa.authentication.event.UserNotFoundEvent;
-import org.cloudfoundry.identity.uaa.config.PasswordPolicy;
 import org.cloudfoundry.identity.uaa.user.UaaUser;
 import org.cloudfoundry.identity.uaa.user.UaaUserDatabase;
-import org.cloudfoundry.identity.uaa.util.JsonUtils;
 import org.cloudfoundry.identity.uaa.zone.IdentityProvider;
 import org.cloudfoundry.identity.uaa.zone.IdentityProviderProvisioning;
 import org.cloudfoundry.identity.uaa.zone.IdentityZoneHolder;
@@ -53,7 +51,6 @@ import java.security.SecureRandom;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -73,6 +70,7 @@ public class AuthzAuthenticationManager implements AuthenticationManager, Applic
     private String origin;
     private boolean allowUnverifiedUsers = true;
 
+    private StatsDClient statsDClient;
     /**
      * Dummy user allows the authentication process for non-existent and locked
      * out users to be as close to
@@ -141,7 +139,7 @@ public class AuthzAuthenticationManager implements AuthenticationManager, Applic
             Authentication success = new UaaAuthentication(new UaaPrincipal(user),
                             user.getAuthorities(), (UaaAuthenticationDetails) req.getDetails());
             publish(new UserAuthenticationSuccessEvent(user, success));
-
+            statsDClient.incrementCounter("user_authentication_count");
             return success;
         }
 
@@ -229,5 +227,13 @@ public class AuthzAuthenticationManager implements AuthenticationManager, Applic
 
     public void setAllowUnverifiedUsers(boolean allowUnverifiedUsers) {
         this.allowUnverifiedUsers = allowUnverifiedUsers;
+    }
+
+    public StatsDClient getStatsDClient() {
+        return statsDClient;
+    }
+
+    public void setStatsDClient(StatsDClient statsDClient) {
+        this.statsDClient = statsDClient;
     }
 }

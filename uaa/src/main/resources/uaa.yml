@@ -116,6 +116,11 @@
 #    requireDigit: 0
 #    requireSpecialCharacter: 0
 
+#statsD:
+#  hostname: localhost
+#  port: 8521
+#  prefix: uaa
+
 oauth:
   user:
     authorities:

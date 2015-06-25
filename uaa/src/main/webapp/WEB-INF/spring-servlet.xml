@@ -218,6 +218,12 @@
         </constructor-arg>
     </bean>
 
+    <bean name="statsDClient" class="com.timgroup.statsd.NonBlockingStatsDClient">
+        <constructor-arg value="${statsD.prefix:uaa}"/>
+        <constructor-arg value="${statsD.hostname:localhost}"/>
+        <constructor-arg value="${statsD.port:8125}"/>
+    </bean>
+
     <bean id="bcryptPasswordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" />
 
     <bean id="cachingPasswordEncoder" class="org.cloudfoundry.identity.uaa.util.CachingPasswordEncoder">

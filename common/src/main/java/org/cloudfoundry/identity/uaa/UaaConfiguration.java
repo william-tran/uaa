@@ -66,6 +66,8 @@ public class UaaConfiguration {
     @Valid
     public Jwt jwt;
     @Valid
+    public StatsD statsD;
+    @Valid
     public OAuth oauth;
     @Valid
     public Scim scim;
@@ -141,6 +143,11 @@ public class UaaConfiguration {
             public String signingKey;
             public String verificationKey;
         }
+    }
+    public static class StatsD {
+        public String prefix;
+        public String hostname;
+        public int port;
     }
 
     public static class OAuth {

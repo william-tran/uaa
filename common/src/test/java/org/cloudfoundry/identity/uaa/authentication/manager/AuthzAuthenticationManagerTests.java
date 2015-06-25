@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.cloudfoundry.identity.uaa.authentication.manager;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.timgroup.statsd.StatsDClient;
 import org.cloudfoundry.identity.uaa.authentication.AccountNotVerifiedException;
 import org.cloudfoundry.identity.uaa.authentication.AuthenticationPolicyRejectionException;
 import org.cloudfoundry.identity.uaa.authentication.AuthzAuthenticationRequest;
@@ -70,6 +70,7 @@ public class AuthzAuthenticationManagerTests {
     private UaaUser user = null;
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private String loginServerUserName="loginServerUser".toLowerCase();
+    private StatsDClient statsDClient;
     private IdentityProviderProvisioning providerProvisioning;
 
     @Before
@@ -92,10 +93,12 @@ public class AuthzAuthenticationManagerTests {
             new Date());
         providerProvisioning = mock(IdentityProviderProvisioning.class);
         db = mock(UaaUserDatabase.class);
+        statsDClient = mock(StatsDClient.class);
         publisher = mock(ApplicationEventPublisher.class);
         mgr = new AuthzAuthenticationManager(db, encoder, providerProvisioning);
         mgr.setApplicationEventPublisher(publisher);
         mgr.setOrigin(Origin.UAA);
+        mgr.setStatsDClient(statsDClient);
     }
 
     @Test
@@ -161,6 +164,7 @@ public class AuthzAuthenticationManagerTests {
         assertEquals("auser", ((UaaPrincipal) result.getPrincipal()).getName());
 
         verify(publisher).publishEvent(isA(UserAuthenticationSuccessEvent.class));
+        verify(statsDClient).incrementCounter("user_authentication_count");
     }
 
     @Test

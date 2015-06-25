@@ -328,6 +328,7 @@
         <property name="accountLoginPolicy" ref="periodLockoutPolicy"/>
         <property name="origin" value="uaa"/>
         <property name="allowUnverifiedUsers" value="${allowUnverifiedUsers:true}"/>
+        <property name="statsDClient" ref="statsDClient" />
     </bean>
 
     <bean id="uaaAuthenticationMgr" class="org.cloudfoundry.identity.uaa.authentication.manager.CheckIdpEnabledAuthenticationManager">
