@@ -1,5 +1,5 @@
 /*******************************************************************************
- *     Cloud Foundry 
+ *     Cloud Foundry
  *     Copyright (c) [2009-2014] Pivotal Software, Inc. All Rights Reserved.
  *
  *     This product is licensed to you under the Apache License, Version 2.0 (the "License").
@@ -17,6 +17,8 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opensaml.xml.security.credential.Credential;
+
+import java.util.Arrays;
 
 public class SamlLoginServerKeyManagerTests {
 
@@ -242,5 +244,60 @@ public class SamlLoginServerKeyManagerTests {
                 throw x;
             }
         }
+    }
+
+    @Test
+    public void testSreeKeys() throws Exception {
+        String key = "-----BEGIN RSA PRIVATE KEY-----\n" +
+            "   MIIEpAIBAAKCAQEA8uaHlcy2DLLx2HwIzLhw7QIReHJ9sjKQpNV0aVsOjlKle7ig\n" +
+            "   JMNZVtzj11UkCvVcjNfUEKgbM/c0MDpoMt50oOD99YUYNwQPhl4ZyOcB344Rp1Fq\n" +
+            "   M2t2zzGeYm/Yox8SJ2bYcA6F6NBc6PzOR9Y2dmHICRnefLP+NwZ5hJ2Pqjc7MlNn\n" +
+            "   7Sx3uNGQ7EcPHKbFrq4AwUFkXbNnIp6cOJDfhID81feff0HC/oYB1WaEBOlvmdZO\n" +
+            "   MYQNhtPpMF1jW08bvBhNtawef64WlGAgYGdEE6MvYbU2zs4IfzqrtAbSdjPZ6ZC8\n" +
+            "   SIfMwM7Z8jiCWuV60DOmMRfoK88PFnxo5MGfJQIDAQABAoIBAA818HepAh15dzuf\n" +
+            "   SM3JHwk4f++S+9wU3onz8/5E/XxcIJDG1wB2WzndS0dIxaEKDGmlelowrMNsT5BV\n" +
+            "   mADXfWY1sLGXTBTl5DL94Y97J9rgAqr/pi7iI+aFrO1tI5vTbkeZYSRjRG933Nma\n" +
+            "   OzC0cWSoauZnAE++1cSMWz+6vixiec2YrB//iEeolcca7rxKaSuBgBqv3Q96DFDa\n" +
+            "   2bCoD0ioEwFn10dgwr7Q79JC4XpG6KxhG7WnRgibfoPvJiC3tNVNpo5fz2c+q/Hy\n" +
+            "   iOcDnasDglc7DOfFRRo81kHCvh3bhoyx+qzI7sW37y/7j5r6BPA0/YWfG8edK0vO\n" +
+            "   rn7kfWECgYEA/ogbOqDOf1Ab8Nxs+Y5cGpL/OKSk9RxEGcYie1ol4Y7vMclRDr/J\n" +
+            "   Sx/K3dWiCqo9EGzHfqKPg7+y7jtc3ZDVYtt+j+aFOhK2wzKwa99IgLn/x3XfRf2d\n" +
+            "   NuWEeqgrnXO+Jm9tCC90zXhqOjcRjcrXGEH3IXJJ97ON4XjBPsi86EcCgYEA9E0/\n" +
+            "   DlEhEminz/zYOQj6+5THgfys6w4XPLZch/LE0gAWzfOFlkky+KUdCNosCb/zjGHX\n" +
+            "   6ZXBaFm/Od6xDIk8/m2rdzIPk6R6XtIP1tcrchgxS05OcmNE+Y2dNaABJAFb+dNu\n" +
+            "   mLqIi5fRmr75EhiwExJbmYqd8gvoK48i0W8rXzMCgYEAsd+d37fW9wOdsxHnmfKR\n" +
+            "   jQSjFQuCN8ScFsLu//L8vAcuQ0WjvsHqQvShyarsxbU4XU0XkPi7gF+sBG45tKDt\n" +
+            "   bltjs95txiqjy/+VaJ0uRr8070gBUyEsB9wXW7xAVpU3EhcWQ/0eDCUVXz9ypftV\n" +
+            "   m58lvBrpdA/nm+TObzjLQysCgYEA7OBNaJtfftL9C9005jB/8xoyTCZsn8lc3KBR\n" +
+            "   nfvVvW0ar30VJUA6bP7j5SZuFtII2zAvwyxSiNSkZv83GlmjS2uZGwzuL5EGmhQC\n" +
+            "   CaU+WfV9LnBx/dWlFneqXEmVcYzj2puYm/wZ04hUU0AijtpjN0rQiFLwjLXg2wOB\n" +
+            "   liK9oiMCgYAFQ6J0UzziLoXob/e+7nc34sJgeoQARRavc3IrXIkMO1gSXW+AEppK\n" +
+            "   B+yPWpc1Ou9rmC57RXwfvmvXQxf/DMJpkHQqlJUCdnBz8dtbml+OE+T3fSboPl/N\n" +
+            "   181ViwdP9YWjAjZzjYWMZJRw1zqgXEm1+XHgW/RvvLUygojJcGL4WA==\n" +
+            "   -----END RSA PRIVATE KEY-----";
+        String certificate = " -----BEGIN CERTIFICATE-----\n" +
+            "   MIIDITCCAgmgAwIBAgIVAM+rkRXEGGvGZrmNueRjztcFoIfkMA0GCSqGSIb3DQEB\n" +
+            "   BQUAMEoxCzAJBgNVBAYTAlVTMRAwDgYDVQQKDAdQaXZvdGFsMSkwJwYDVQQDDCBz\n" +
+            "   ZXJ2aWNlX3Byb3ZpZGVyX2tleV9jcmVkZW50aWFsczAeFw0xNTA3MTQwNjI3MTVa\n" +
+            "   Fw0xNzA3MTMwNjI3MTVaMEoxCzAJBgNVBAYTAlVTMRAwDgYDVQQKDAdQaXZvdGFs\n" +
+            "   MSkwJwYDVQQDDCBzZXJ2aWNlX3Byb3ZpZGVyX2tleV9jcmVkZW50aWFsczCCASIw\n" +
+            "   DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPLmh5XMtgyy8dh8CMy4cO0CEXhy\n" +
+            "   fbIykKTVdGlbDo5SpXu4oCTDWVbc49dVJAr1XIzX1BCoGzP3NDA6aDLedKDg/fWF\n" +
+            "   GDcED4ZeGcjnAd+OEadRajNrds8xnmJv2KMfEidm2HAOhejQXOj8zkfWNnZhyAkZ\n" +
+            "   3nyz/jcGeYSdj6o3OzJTZ+0sd7jRkOxHDxymxa6uAMFBZF2zZyKenDiQ34SA/NX3\n" +
+            "   n39Bwv6GAdVmhATpb5nWTjGEDYbT6TBdY1tPG7wYTbWsHn+uFpRgIGBnRBOjL2G1\n" +
+            "   Ns7OCH86q7QG0nYz2emQvEiHzMDO2fI4glrletAzpjEX6CvPDxZ8aOTBnyUCAwEA\n" +
+            "   ATANBgkqhkiG9w0BAQUFAAOCAQEAxcYE8Haw1enVMqUtdBOmvCg5ZijVMceVH2Zn\n" +
+            "   WJNVqRe62BWySRNE17O0qE2Gj8J8fRtDmzfdDXPhAGksS1dxqfcteiOuPpTaDdWB\n" +
+            "   7BbTe4ydojkpFb1FQD0uGx8M6NheaGWMDIRUW2h2zDtXMFr+1IcSMoaGy5siSEej\n" +
+            "   tmZPCyoRVUnzDTNArpodjGdEvshKDZI7T9EGob2GQe6ETkEjN073/7tqIAXN0XXp\n" +
+            "   eZllc4JUpb8FcvtlU86N4CFvEwl9dzKnzDkw7L4oO8+8CkERAXIg3AWN1aBLeALi\n" +
+            "   OesMjbUOhJMg6Caa0/Kf95Yv9DRYfHXpv5qyqob5q8e31YQ82w==\n" +
+            "   -----END CERTIFICATE-----";
+        String password = "password";
+
+        keyManager = new SamlLoginServerKeyManager(key, password, certificate);
+        System.out.println("keyManager credentials= " + Arrays.toString(keyManager.getAvailableCredentials().toArray()));
+
     }
 }
