@@ -255,6 +255,13 @@
         <property name="expiringCodeStore" ref="codeStore"/>
     </bean>
 
+    <bean id="singleLogoutEndpoint" class="org.cloudfoundry.identity.uaa.authentication.logout.SingleLogoutEndpoint">
+        <constructor-arg name="sessionStorage" ref="sessionStorate" />
+    </bean>
+
+    <bean id="sessionStorate" class="org.cloudfoundry.identity.uaa.authentication.logout.SessionStorage">
+    </bean>
+
     <bean id="healthzEndpoint" class="org.cloudfoundry.identity.uaa.web.HealthzEndpoint" />
 
     <context:annotation-config />

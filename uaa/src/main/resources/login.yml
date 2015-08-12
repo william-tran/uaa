@@ -122,7 +122,14 @@ login:
       # URL metadata fetch - read timeout
       soTimeout: 10000
 #BEGIN SAML PROVIDERS
-#    providers:
+    providers:
+      okta-slo:
+        idpMetadata: https://pivotal.oktapreview.com/app/exk4ks1osc9sjOrcn0h7/sso/saml/metadata
+        nameID: urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
+        assertionConsumerIndex: 0
+        metadataTrustCheck: false
+        showSamlLoginLink: true
+        linkText: 'Okta Single Logout'
 #      okta-local:
 #        idpMetadata: https://pivotal.oktapreview.com/app/k36wkjw6EAEJVZXFFDAU/sso/saml/metadata
 #        nameID: urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
