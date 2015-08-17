@@ -46,9 +46,7 @@ public class UaaConfigurationTests {
             "  user:\n" +
             "    authorities:\n" +
             "      - openid\n" +
-            "      - scim.me\n" +
-            "  openid:\n" +
-            "    fallbackToAuthcode: false");
+            "      - scim.me\n");
     }
 
     @Test
