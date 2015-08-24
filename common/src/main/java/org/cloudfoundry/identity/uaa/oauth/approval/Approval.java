@@ -33,7 +33,7 @@ public class Approval {
 
     public enum ApprovalStatus {
         APPROVED,
-        DENIED;
+        DENIED
     }
 
     private ApprovalStatus status;
@@ -135,24 +135,28 @@ public class Approval {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + userId.hashCode();
-        result = prime * result + clientId.hashCode();
-        result = prime * result + scope.hashCode();
-        result = prime * result + status.hashCode();
-        return result;
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Approval approval = (Approval) o;
+
+        if (getUserId() != null ? !getUserId().equals(approval.getUserId()) : approval.getUserId() != null)
+            return false;
+        if (getClientId() != null ? !getClientId().equals(approval.getClientId()) : approval.getClientId() != null)
+            return false;
+        if (getScope() != null ? !getScope().equals(approval.getScope()) : approval.getScope() != null) return false;
+        return getStatus() == approval.getStatus();
+
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (o == null || !(o instanceof Approval)) {
-            return false;
-        }
-        Approval other = (Approval) o;
-        return userId.equals(other.userId) && clientId.equals(other.clientId) && scope.equals(other.scope)
-                        && status == other.status;
+    public int hashCode() {
+        int result = getUserId() != null ? getUserId().hashCode() : 0;
+        result = 31 * result + (getClientId() != null ? getClientId().hashCode() : 0);
+        result = 31 * result + (getScope() != null ? getScope().hashCode() : 0);
+        result = 31 * result + (getStatus() != null ? getStatus().hashCode() : 0);
+        return result;
     }
 
     @Override
