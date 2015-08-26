@@ -893,8 +893,8 @@ public class TokenMvcMockTests extends InjectedMockContextTest {
         result = getMockMvc().perform(oauthTokenPost).andExpect(status().isOk()).andReturn();
         token = JsonUtils.readValue(result.getResponse().getContentAsString(), Map.class);
         assertNotNull("ID Token should be present when scope=openid", token.get("id_token"));
-        assertNotNull(((List<String>)token.get("id_token")).get(0));
-        validateOpenIdConnectToken(((List<String>)token.get("id_token")).get(0), developer.getId(), clientId);
+        assertNotNull(token.get("id_token"));
+        validateOpenIdConnectToken((String)token.get("id_token"), developer.getId(), clientId);
 
         //authorization code flow without parameter scope=openid
         //http://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
