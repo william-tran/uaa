@@ -20,7 +20,6 @@
             <p th:text="#{'account_activation.' + ${error_message}}">Error Message</p>
         </div>
         <form th:action="@{/invitations/accept.do}" th:unless="${error_message_code == 'code_expired'}" method="post" novalidate="novalidate">
-            <input name="client_id" type="hidden" value="login" th:value="${client_id}"/>
             <input name="password" type="password" placeholder="Password" autocomplete="off" class="form-control"/>
             <input name="password_confirmation" type="password" placeholder="Confirm" autocomplete="off" class="form-control"/>
             <input name="redirect_uri" type="hidden" th:value="${redirect_uri}"/>

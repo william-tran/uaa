@@ -65,7 +65,7 @@ public class InvitationsController {
     }
 
     @RequestMapping(value = "sent", method = GET)
-    public String inviteSentPage(Model model) {
+    public String inviteSentPage() {
         return "invitations/invite_sent";
     }
 
@@ -86,7 +86,6 @@ public class InvitationsController {
     @RequestMapping(value = "/accept.do", method = POST)
     public String acceptInvitation(@RequestParam("password") String password,
                                    @RequestParam("password_confirmation") String passwordConfirmation,
-                                   @RequestParam("client_id") String clientId,
                                    @RequestParam("redirect_uri") String redirectUri,
                                    Model model, HttpServletResponse servletResponse) throws IOException {
 
@@ -104,14 +103,12 @@ public class InvitationsController {
             model.addAttribute("email", principal.getEmail());
             return handleUnprocessableEntity(model, servletResponse, "error_message", e.getMessagesAsOneString(), "invitations/accept_invite");
         }
-        String redirectLocation = invitationsService.acceptInvitation(principal.getId(), principal.getEmail(), password, clientId);
+        invitationsService.acceptInvitation(principal.getId(), principal.getEmail(), password);
 
         if (!redirectUri.equals("")) {
             return "redirect:" + redirectUri;
         }
-        if (redirectLocation != null) {
-            return "redirect:" + redirectLocation;
-        }
+
         return "redirect:/home";
     }
 

@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -28,7 +27,6 @@ import com.dumbster.smtp.SmtpMessage;
 import org.cloudfoundry.identity.uaa.authentication.Origin;
 import org.cloudfoundry.identity.uaa.codestore.ExpiringCode;
 import org.cloudfoundry.identity.uaa.scim.ScimUser;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -121,19 +119,6 @@ public class InvitationsIT {
     }
 
     @Test
-    public void testClientRedirectInviteUser() throws Exception {
-        String code = generateCode();
-        webDriver.get(baseUrl + "/invitations/accept?code=" + code);
-        assertEquals("Create your account", webDriver.findElement(By.tagName("h1")).getText());
-
-        webDriver.findElement(By.name("password")).sendKeys("secr3T");
-        webDriver.findElement(By.name("password_confirmation")).sendKeys("secr3T");
-
-        webDriver.findElement(By.xpath("//input[@value='Create account']")).click();
-        Assert.assertThat(webDriver.findElement(By.cssSelector("h1")).getText(), not(containsString("Where to?")));
-    }
-
-    @Test
     public void testInsecurePasswordDisplaysErrorMessage() throws Exception {
         String code = generateCode();
         webDriver.get(baseUrl + "/invitations/accept?code=" + code);
@@ -166,13 +151,12 @@ public class InvitationsIT {
         ResponseEntity<ScimUser> response = uaaTemplate.exchange(uaaUrl + "/Users", HttpMethod.POST, request, ScimUser.class);
 
         Timestamp expiry = new Timestamp(System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(System.currentTimeMillis() + 24 * 3600, TimeUnit.MILLISECONDS));
-        ExpiringCode expiringCode = new ExpiringCode(null, expiry, "{\"client_id\":\"app\", \"user_id\":\"" + response.getBody().getId() + "\", \"email\":\"user@example.com\"}");
+        ExpiringCode expiringCode = new ExpiringCode(null, expiry, "{\"user_id\":\"" + response.getBody().getId() + "\", \"email\":\"user@example.com\"}");
         HttpEntity<ExpiringCode> expiringCodeRequest = new HttpEntity<>(expiringCode, headers);
         ResponseEntity<ExpiringCode> expiringCodeResponse = uaaTemplate.exchange(uaaUrl + "/Codes", HttpMethod.POST, expiringCodeRequest, ExpiringCode.class);
         expiringCode = expiringCodeResponse.getBody();
         return expiringCode.getCode();
     }
-
 
     private void signIn(String userName, String password) {
         webDriver.get(baseUrl + "/logout.do");

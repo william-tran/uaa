@@ -5,14 +5,12 @@ import org.apache.commons.logging.LogFactory;
 import org.cloudfoundry.identity.uaa.error.UaaException;
 import org.cloudfoundry.identity.uaa.login.AccountCreationService.ExistingUserResponse;
 import org.cloudfoundry.identity.uaa.message.PasswordChangeRequest;
-import org.cloudfoundry.identity.uaa.oauth.ClientAdminEndpoints;
 import org.cloudfoundry.identity.uaa.scim.ScimUser;
 import org.cloudfoundry.identity.uaa.scim.ScimUserProvisioning;
 import org.cloudfoundry.identity.uaa.scim.exception.ScimResourceAlreadyExistsException;
 import org.cloudfoundry.identity.uaa.util.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
-import org.springframework.security.oauth2.provider.ClientDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -28,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 public class EmailInvitationsService implements InvitationsService {
     private final Log logger = LogFactory.getLog(getClass());
 
-    public static final String INVITATION_REDIRECT_URL = "invitation_redirect_url";
     public static final int INVITATION_EXPIRY_DAYS = 365;
 
     private final SpringTemplateEngine templateEngine;
@@ -55,9 +52,6 @@ public class EmailInvitationsService implements InvitationsService {
 
     @Autowired
     private ExpiringCodeService expiringCodeService;
-
-    @Autowired
-    private ClientAdminEndpoints clientAdminEndpoints;
 
     private void sendInvitationEmail(String email, String currentUser, String code) {
         String subject = getSubjectText();
@@ -116,7 +110,7 @@ public class EmailInvitationsService implements InvitationsService {
     }
 
     @Override
-    public String acceptInvitation(String userId, String email, String password, String clientId) {
+    public void acceptInvitation(String userId, String email, String password) {
         ScimUser user = scimUserProvisioning.retrieve(userId);
         scimUserProvisioning.verifyUser(user.getId(), user.getVersion());
 
@@ -124,17 +118,5 @@ public class EmailInvitationsService implements InvitationsService {
         request.setPassword(password);
 
         scimUserProvisioning.changePassword(userId, null, password);
-
-        String redirectLocation = null;
-        if (clientId != null && !clientId.equals("")) {
-            try {
-                ClientDetails clientDetails = clientAdminEndpoints.getClientDetails(clientId);
-                redirectLocation = (String) clientDetails.getAdditionalInformation().get(INVITATION_REDIRECT_URL);
-            }catch (Exception x) {
-                throw new RuntimeException(x);
-            }
-        }
-
-        return redirectLocation;
     }
 }

@@ -7,12 +7,12 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
@@ -139,8 +139,6 @@ public class EmailInvitationsServiceTests {
 		request.setContextPath("/login");
 		RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 		
-		byte[] errorResponse = "{\"error\":\"invalid_user\",\"message\":\"error message\",\"user_id\":\"existing-user-id\",\"verified\":false,\"active\":true}".getBytes();
-
         ArgumentCaptor<Map<String,String>> captor = ArgumentCaptor.forClass((Class)Map.class);
 
         when(expiringCodeService.generateCode(captor.capture(), anyInt(), eq(TimeUnit.DAYS))).thenReturn("the_secret_code");
@@ -196,28 +194,15 @@ public class EmailInvitationsServiceTests {
 
     @Test
     public void testAcceptInvitation() throws Exception {
-
-
         ScimUser user = new ScimUser("user-id-001", "user@example.com", "first", "last");
+        user.setVersion(1);
         BaseClientDetails clientDetails = new BaseClientDetails("app", null, null, null, null, "http://example.com/redirect");
-        clientDetails.addAdditionalInformation("invitation_redirect_url", "http://example.com/redirect");
         when(scimUserProvisioning.retrieve(eq("user-id-001"))).thenReturn(user);
         when(clientAdminEndpoints.getClientDetails(eq("app"))).thenReturn(clientDetails);
-        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "app");
+        emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret");
 
+        verify(scimUserProvisioning).verifyUser("user-id-001", 1);
         Mockito.verifyZeroInteractions(expiringCodeService);
-        assertEquals("http://example.com/redirect", redirectLocation);
-    }
-
-    @Test
-    public void testAcceptInvitationWithNoClientRedirect() throws Exception {
-
-        ScimUser user = new ScimUser("user-id-001", "user@example.com", "first", "last");
-        when(scimUserProvisioning.retrieve(eq("user-id-001"))).thenReturn(user);
-
-        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "");
-        Mockito.verifyZeroInteractions(expiringCodeService);
-        assertNull(redirectLocation);
     }
 
     @Configuration
