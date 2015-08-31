@@ -73,7 +73,7 @@ public class InvitationsController {
     public String acceptInvitePage(@RequestParam String code, Model model, HttpServletResponse response) throws IOException {
         try {
             Map<String, String> codeData = expiringCodeService.verifyCode(code);
-            UaaPrincipal uaaPrincipal = new UaaPrincipal(codeData.get("user_id"), codeData.get("email"), codeData.get("email"), Origin.UAA, null, IdentityZoneHolder.get().getId());
+            UaaPrincipal uaaPrincipal = new UaaPrincipal(codeData.get("user_id"), codeData.get("email"), codeData.get("email"), Origin.UNKNOWN, null, IdentityZoneHolder.get().getId());
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(uaaPrincipal, null, UaaAuthority.USER_AUTHORITIES);
             SecurityContextHolder.getContext().setAuthentication(token);
             model.addAllAttributes(codeData);

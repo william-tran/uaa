@@ -16,6 +16,7 @@ package org.cloudfoundry.identity.uaa.login;
 
 import org.cloudfoundry.identity.uaa.authentication.Origin;
 import org.cloudfoundry.identity.uaa.login.util.FakeJavaMailSender;
+import org.cloudfoundry.identity.uaa.login.util.FakeJavaMailSender.MimeMessageWrapper;
 import org.cloudfoundry.identity.uaa.mock.InjectedMockContextTest;
 import org.cloudfoundry.identity.uaa.mock.util.MockMvcUtils;
 import org.cloudfoundry.identity.uaa.scim.ScimUser;
@@ -27,10 +28,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.securityContext;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,30 +57,30 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
         assertEquals(Origin.UNKNOWN, user.getOrigin());
     }
 
-    public FakeJavaMailSender.MimeMessageWrapper inviteUser(String email) throws Exception {
-        SecurityContext marissa = MockMvcUtils.utils().getMarissaSecurityContext(getWebApplicationContext());
-        getMockMvc().perform(post("/invitations/new.do")
-            .accept(MediaType.TEXT_HTML)
-            .param("email", email)
-            .with(securityContext(marissa))
-            .with(csrf()))
-            .andExpect(status().isFound())
-            .andExpect(redirectedUrl("sent"));
-
-        assertEquals(Origin.UNKNOWN, getWebApplicationContext().getBean(JdbcTemplate.class).queryForObject("SELECT origin FROM users WHERE username='"+email+"'", String.class));
-
-        FakeJavaMailSender sender = getWebApplicationContext().getBean(FakeJavaMailSender.class);
-        assertEquals(1, sender.getSentMessages().size());
-        FakeJavaMailSender.MimeMessageWrapper message = sender.getSentMessages().get(0);
-        return message;
-
-    }
-
     @Test
-    public void inviteUser_Correct_Origin_Sent() throws Exception {
+    public void inviteUser_Correct_Origin_Set() throws Exception {
         String email = new RandomValueStringGenerator().generate()+"@test.org";
         inviteUser(email);
     }
+
+    @Test
+    public void accept_invitation_origin_reset() throws Exception {
+        String email = new RandomValueStringGenerator().generate()+"@test.org";
+        MimeMessageWrapper message = inviteUser(email);
+        String code = extractInvitationCode(message.getContentString());
+        String acceptContent = getMockMvc().perform(get("/invitations/accept")
+            .param("code", code)
+            .accept(MediaType.TEXT_HTML)
+            .param("email", email))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Email: " + email)))
+            .andReturn().getResponse().getContentAsString();
+        System.out.println("acceptContent = " + acceptContent);
+    }
+
+
+
+
 
     @Test
     public void invite_user_show_correct_saml_idp_for_acceptance() throws Exception {
@@ -94,4 +101,35 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
 
     @Test
     public void accept_invite_for_existing_user_deletes_invite() throws Exception {}
+
+    public MimeMessageWrapper inviteUser(String email) throws Exception {
+        SecurityContext marissa = MockMvcUtils.utils().getMarissaSecurityContext(getWebApplicationContext());
+        getMockMvc().perform(post("/invitations/new.do")
+            .accept(MediaType.TEXT_HTML)
+            .param("email", email)
+            .with(securityContext(marissa))
+            .with(csrf()))
+            .andExpect(status().isFound())
+            .andExpect(redirectedUrl("sent"));
+
+        assertEquals(Origin.UNKNOWN, getWebApplicationContext().getBean(JdbcTemplate.class).queryForObject("SELECT origin FROM users WHERE username='" + email + "'", String.class));
+
+        FakeJavaMailSender sender = getWebApplicationContext().getBean(FakeJavaMailSender.class);
+        assertEquals(1, sender.getSentMessages().size());
+        MimeMessageWrapper message = sender.getSentMessages().get(0);
+        return message;
+    }
+
+    public String extractInvitationCode(String email) throws Exception {
+        System.out.println(email);
+        Pattern p = Pattern.compile("accept\\?code\\=(.*?)\\\"\\>Accept Invite");
+        Matcher m = p.matcher(email);
+
+        if (m.find()) {
+            return m.group(1);
+        } else {
+            return null;
+        }
+    }
+
 }
