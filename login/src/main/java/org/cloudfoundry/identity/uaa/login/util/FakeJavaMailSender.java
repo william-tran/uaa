@@ -12,6 +12,12 @@
  *******************************************************************************/
 package org.cloudfoundry.identity.uaa.login.util;
 
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessagePreparator;
+import org.springframework.util.StreamUtils;
+
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -26,12 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessagePreparator;
-import org.springframework.util.StreamUtils;
-
 public class FakeJavaMailSender implements JavaMailSender {
 
     private final Session session;
@@ -41,6 +41,10 @@ public class FakeJavaMailSender implements JavaMailSender {
     public FakeJavaMailSender() {
         session = Session.getInstance(new Properties());
         sentMessages = new ArrayList<>();
+    }
+
+    public void clearMessage() {
+        sentMessages.clear();
     }
 
     public int getMaxMessages() {

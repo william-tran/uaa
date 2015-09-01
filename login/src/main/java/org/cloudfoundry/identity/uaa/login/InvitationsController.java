@@ -31,12 +31,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -167,13 +165,21 @@ public class InvitationsController {
     public String acceptInvitePage(@RequestParam String code, Model model, HttpServletResponse response) throws IOException {
         try {
             Map<String, String> codeData = expiringCodeService.verifyCode(code);
+            List<IdentityProvider> providers = filterIdpsForClientAndEmailDomain(codeData.get("client_id"), codeData.get("email"));
+            if (providers.size()==0) {
+
+            } else if (providers.size()==1 && Origin.SAML.equals(providers.get(0).getType())) {
+
+            } else {
+
+            }
+
             UaaPrincipal uaaPrincipal = new UaaPrincipal(codeData.get("user_id"), codeData.get("email"), codeData.get("email"), Origin.UNKNOWN, null, IdentityZoneHolder.get().getId());
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(uaaPrincipal, null, UaaAuthority.USER_AUTHORITIES);
             SecurityContextHolder.getContext().setAuthentication(token);
             model.addAllAttributes(codeData);
-            List<IdentityProvider> providers = filterIdpsForClientAndEmailDomain((String)codeData.get("client_id"), (String)codeData.get("email"));
-
             return "invitations/accept_invite";
+
         } catch (CodeNotFoundException e) {
             return handleUnprocessableEntity(model, response, "error_message_code", "code_expired", "invitations/accept_invite");
         }

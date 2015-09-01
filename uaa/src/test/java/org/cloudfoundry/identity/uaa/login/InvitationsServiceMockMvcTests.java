@@ -48,6 +48,7 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
     @After
     public void clearOutCodeTable() {
         getWebApplicationContext().getBean(JdbcTemplate.class).update("DELETE FROM expiring_code_store");
+        getWebApplicationContext().getBean(FakeJavaMailSender.class).clearMessage();
     }
 
     @Test
