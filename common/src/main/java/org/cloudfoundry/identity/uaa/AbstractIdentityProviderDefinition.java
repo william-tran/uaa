@@ -17,13 +17,16 @@ package org.cloudfoundry.identity.uaa;
 import java.util.List;
 
 public abstract class AbstractIdentityProviderDefinition {
+    public static final String EMAIL_DOMAIN_ATTR = "emailDomain";
+
     private List<String> emailDomain;
 
     public List<String> getEmailDomain() {
         return emailDomain;
     }
 
-    public void setEmailDomain(List<String> emailDomain) {
+    public AbstractIdentityProviderDefinition setEmailDomain(List<String> emailDomain) {
         this.emailDomain = emailDomain;
+        return this;
     }
 }

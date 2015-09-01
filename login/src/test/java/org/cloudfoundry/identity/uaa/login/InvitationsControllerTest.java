@@ -1,15 +1,22 @@
 package org.cloudfoundry.identity.uaa.login;
 
+import org.cloudfoundry.identity.uaa.AbstractIdentityProviderDefinition;
 import org.cloudfoundry.identity.uaa.authentication.Origin;
 import org.cloudfoundry.identity.uaa.authentication.UaaPrincipal;
+import org.cloudfoundry.identity.uaa.client.ClientConstants;
 import org.cloudfoundry.identity.uaa.error.UaaException;
+import org.cloudfoundry.identity.uaa.ldap.LdapIdentityProviderDefinition;
 import org.cloudfoundry.identity.uaa.login.ExpiringCodeService.CodeNotFoundException;
+import org.cloudfoundry.identity.uaa.login.saml.SamlIdentityProviderDefinition;
 import org.cloudfoundry.identity.uaa.login.test.ThymeleafConfig;
 import org.cloudfoundry.identity.uaa.scim.exception.InvalidPasswordException;
 import org.cloudfoundry.identity.uaa.scim.validate.PasswordValidator;
 import org.cloudfoundry.identity.uaa.user.UaaAuthority;
-import org.cloudfoundry.identity.uaa.util.SetServerNameRequestPostProcessor;
+import org.cloudfoundry.identity.uaa.util.JsonUtils;
+import org.cloudfoundry.identity.uaa.zone.IdentityProvider;
+import org.cloudfoundry.identity.uaa.zone.IdentityProviderProvisioning;
 import org.cloudfoundry.identity.uaa.zone.IdentityZoneHolder;
+import org.cloudfoundry.identity.uaa.zone.UaaIdentityProviderDefinition;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,13 +26,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.ResourceBundleMessageSource;
-import org.springframework.mock.env.MockEnvironment;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.oauth2.provider.ClientDetailsService;
+import org.springframework.security.oauth2.provider.client.BaseClientDetails;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -38,27 +42,28 @@ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerCo
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,6 +90,12 @@ public class InvitationsControllerTest {
     @Autowired
     PasswordValidator passwordValidator;
 
+    @Autowired
+    ClientDetailsService clientDetailsService;
+
+    @Autowired
+    IdentityProviderProvisioning providerProvisioning;
+
     @Before
     public void setUp() throws Exception {
         SecurityContextHolder.clearContext();
@@ -95,6 +106,58 @@ public class InvitationsControllerTest {
     @After
     public void tearDown() {
     	SecurityContextHolder.clearContext();
+    }
+
+
+    @Test
+    public void test_doesEmailDomainMatchProvider() throws Exception {
+        IdentityProvider uaaProvider = new IdentityProvider();
+        uaaProvider.setType(Origin.UAA).setOriginKey(Origin.UAA).setId(Origin.UAA);
+
+        IdentityProvider ldapProvider = new IdentityProvider();
+        ldapProvider.setType(Origin.LDAP).setOriginKey(Origin.LDAP).setId(Origin.LDAP);
+
+        IdentityProvider samlProvider = new IdentityProvider();
+        samlProvider.setType(Origin.SAML).setOriginKey(Origin.SAML).setId(Origin.SAML);
+
+        SamlIdentityProviderDefinition samlIdentityProviderDefinition = new SamlIdentityProviderDefinition("http://some.meta.data", Origin.SAML, "nameID", 0, true, true, "Saml Link Text", null, IdentityZoneHolder.get().getId());
+        LdapIdentityProviderDefinition ldapIdentityProviderDefinition = LdapIdentityProviderDefinition.searchAndBindMapGroupToScopes("baseUrl","bindUserDN","bindUserPassword","userSearchBase","userSearchFilter","groupSearchBase","groupSearchFilter","mail", null, false, false, false,1,true);
+        UaaIdentityProviderDefinition  uaaIdentityProviderDefinition  = new UaaIdentityProviderDefinition();
+
+        when(providerProvisioning.retrieveActive(anyString())).thenReturn(Arrays.asList(uaaProvider, ldapProvider, samlProvider));
+
+        InvitationsController controller = webApplicationContext.getBean(InvitationsController.class);
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), containsInAnyOrder(uaaProvider, ldapProvider, samlProvider));
+
+        uaaProvider.setConfig(JsonUtils.writeValueAsString(uaaIdentityProviderDefinition));
+        ldapProvider.setConfig(JsonUtils.writeValueAsString(ldapIdentityProviderDefinition));
+        samlProvider.setConfig(JsonUtils.writeValueAsString(samlIdentityProviderDefinition));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), containsInAnyOrder(uaaProvider, ldapProvider, samlProvider));
+
+        uaaProvider.setConfig(JsonUtils.writeValueAsString(uaaIdentityProviderDefinition.setEmailDomain(Arrays.asList("test1.org", "test2.org"))));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), containsInAnyOrder(ldapProvider, samlProvider));
+
+        ldapProvider.setConfig(JsonUtils.writeValueAsString(ldapIdentityProviderDefinition.setEmailDomain(Arrays.asList("test1.org", "test2.org"))));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), containsInAnyOrder(samlProvider));
+
+
+        samlProvider.setConfig(JsonUtils.writeValueAsString(samlIdentityProviderDefinition.setEmailDomain(Arrays.asList("test1.org", "test2.org"))));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), empty());
+
+        uaaProvider.setConfig(JsonUtils.writeValueAsString(uaaIdentityProviderDefinition.setEmailDomain(Collections.EMPTY_LIST)));
+        ldapProvider.setConfig(JsonUtils.writeValueAsString(ldapIdentityProviderDefinition.setEmailDomain(Collections.EMPTY_LIST)));
+        samlProvider.setConfig(JsonUtils.writeValueAsString(samlIdentityProviderDefinition.setEmailDomain(Collections.EMPTY_LIST)));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(null, "test@test.org"), containsInAnyOrder(uaaProvider, ldapProvider, samlProvider));
+
+        String clientId = "client_id";
+        BaseClientDetails client = new BaseClientDetails(clientId, "", "", "client_credentials","");
+        client.addAdditionalInformation(ClientConstants.ALLOWED_PROVIDERS, Arrays.asList(Origin.UAA, Origin.SAML));
+        when(clientDetailsService.loadClientByClientId(eq(clientId))).thenReturn(client);
+        assertThat(controller.filterIdpsForClientAndEmailDomain(clientId, "test@test.org"), containsInAnyOrder(uaaProvider, samlProvider));
+
+        uaaProvider.setConfig(JsonUtils.writeValueAsString(uaaIdentityProviderDefinition.setEmailDomain(Arrays.asList("test1.org", "test2.org"))));
+        assertThat(controller.filterIdpsForClientAndEmailDomain(clientId, "test@test.org"), containsInAnyOrder(samlProvider));
+
     }
 
     @Test
@@ -108,16 +171,8 @@ public class InvitationsControllerTest {
 
     @Test
     public void testSendInvitationEmail() throws Exception {
-        UaaPrincipal p = new UaaPrincipal("123","marissa","marissa@test.org", Origin.UAA,"", IdentityZoneHolder.get().getId());
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(p, "", UaaAuthority.USER_AUTHORITIES);
-        assertTrue(auth.isAuthenticated());
-        MockSecurityContext mockSecurityContext = new MockSecurityContext(auth);
-        SecurityContextHolder.setContext(mockSecurityContext);
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            mockSecurityContext
-        );
+        UsernamePasswordAuthenticationToken auth = getMarissaAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(auth);
 
         MockHttpServletRequestBuilder post = post("/invitations/new.do")
             .param("email", "user1@example.com")
@@ -127,6 +182,13 @@ public class InvitationsControllerTest {
             .andExpect(status().isFound())
             .andExpect(redirectedUrl("sent"));
         verify(invitationsService).inviteUser("user1@example.com", "marissa", "");
+    }
+
+    protected UsernamePasswordAuthenticationToken getMarissaAuthentication() {
+        UaaPrincipal p = new UaaPrincipal("123","marissa","marissa@test.org", Origin.UAA,"", IdentityZoneHolder.get().getId());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(p, "", UaaAuthority.USER_AUTHORITIES);
+        assertTrue(auth.isAuthenticated());
+        return auth;
     }
 
     @Test
@@ -142,16 +204,7 @@ public class InvitationsControllerTest {
 
     @Test
     public void sendInvitationWithRedirectUri() throws Exception {
-        UaaPrincipal p = new UaaPrincipal("123","marissa","marissa@test.org", Origin.UAA,"", IdentityZoneHolder.get().getId());
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(p, "", UaaAuthority.USER_AUTHORITIES);
-        assertTrue(auth.isAuthenticated());
-        MockSecurityContext mockSecurityContext = new MockSecurityContext(auth);
-        SecurityContextHolder.setContext(mockSecurityContext);
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            mockSecurityContext
-        );
+        SecurityContextHolder.getContext().setAuthentication(getMarissaAuthentication());
 
         MockHttpServletRequestBuilder post = post("/invitations/new.do")
             .param("email", "user1@example.com")
@@ -166,16 +219,7 @@ public class InvitationsControllerTest {
 
     @Test
     public void testSendInvitationEmailToExistingVerifiedUser() throws Exception {
-        UaaPrincipal p = new UaaPrincipal("123","marissa","marissa@test.org", Origin.UAA,"", IdentityZoneHolder.get().getId());
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(p, "", UaaAuthority.USER_AUTHORITIES);
-        assertTrue(auth.isAuthenticated());
-        MockSecurityContext mockSecurityContext = new MockSecurityContext(auth);
-        SecurityContextHolder.setContext(mockSecurityContext);
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            mockSecurityContext
-        );
+        SecurityContextHolder.getContext().setAuthentication(getMarissaAuthentication());
 
         MockHttpServletRequestBuilder post = post("/invitations/new.do")
             .param("email", "user1@example.com")
@@ -190,16 +234,7 @@ public class InvitationsControllerTest {
 
     @Test
     public void testSendInvitationWithInvalidEmail() throws Exception {
-        UaaPrincipal p = new UaaPrincipal("123","marissa","marissa@test.org", Origin.UAA,"", IdentityZoneHolder.get().getId());
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(p, "", UaaAuthority.USER_AUTHORITIES);
-        assertTrue(auth.isAuthenticated());
-        MockSecurityContext mockSecurityContext = new MockSecurityContext(auth);
-        SecurityContextHolder.setContext(mockSecurityContext);
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            mockSecurityContext
-        );
+        SecurityContextHolder.getContext().setAuthentication(getMarissaAuthentication());
 
         MockHttpServletRequestBuilder post = post("/invitations/new.do")
             .param("email", "not_a_real_email")
@@ -344,27 +379,6 @@ public class InvitationsControllerTest {
     }
 
 
-    public static class MockSecurityContext implements SecurityContext {
-
-        private static final long serialVersionUID = -1386535243513362694L;
-
-        private Authentication authentication;
-
-        public MockSecurityContext(Authentication authentication) {
-            this.authentication = authentication;
-        }
-
-        @Override
-        public Authentication getAuthentication() {
-            return this.authentication;
-        }
-
-        @Override
-        public void setAuthentication(Authentication authentication) {
-            this.authentication = authentication;
-        }
-    }
-
     @Configuration
     @EnableWebMvc
     @Import(ThymeleafConfig.class)
@@ -399,10 +413,21 @@ public class InvitationsControllerTest {
 
         @Bean
         ExpiringCodeService expiringCodeService() {
-        	return mock(ExpiringCodeService.class);
+            return mock(ExpiringCodeService.class);
         }
 
         @Bean
         PasswordValidator uaaPasswordValidator() { return mock(PasswordValidator.class); }
+
+        @Bean
+        IdentityProviderProvisioning providerProvisioning() {
+            return mock (IdentityProviderProvisioning.class);
+        }
+
+        @Bean
+        ClientDetailsService clientDetailsService() {
+            return mock(ClientDetailsService.class);
+        }
+
     }
 }

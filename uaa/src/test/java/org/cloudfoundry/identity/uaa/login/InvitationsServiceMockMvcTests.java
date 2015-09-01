@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.securityContext;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -55,6 +56,7 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
         AccountCreationService svc = getWebApplicationContext().getBean(AccountCreationService.class);
         ScimUser user = svc.createUser(username, "password");
         assertEquals(Origin.UNKNOWN, user.getOrigin());
+        assertFalse(user.isVerified());
     }
 
     @Test
@@ -71,7 +73,7 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
         String acceptContent = getMockMvc().perform(get("/invitations/accept")
             .param("code", code)
             .accept(MediaType.TEXT_HTML)
-            .param("email", email))
+        )
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Email: " + email)))
             .andReturn().getResponse().getContentAsString();
