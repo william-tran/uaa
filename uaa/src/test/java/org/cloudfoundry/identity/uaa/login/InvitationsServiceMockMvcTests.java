@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
 
@@ -44,11 +45,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
 
+    private JavaMailSender originalSender;
+    private FakeJavaMailSender fakeJavaMailSender = new FakeJavaMailSender();
+    private RandomValueStringGenerator generator = new RandomValueStringGenerator();
+
+    @Before
+    public void setUpFakeMailServer() throws Exception {
+        originalSender = getWebApplicationContext().getBean("emailService", EmailService.class).getMailSender();
+        getWebApplicationContext().getBean("emailService", EmailService.class).setMailSender(fakeJavaMailSender);
+    }
+
+    @After
+    public void restoreMailServer() throws Exception {
+        getWebApplicationContext().getBean("emailService", EmailService.class).setMailSender(originalSender);
+    }
+
     @Before
     @After
     public void clearOutCodeTable() {
         getWebApplicationContext().getBean(JdbcTemplate.class).update("DELETE FROM expiring_code_store");
-        getWebApplicationContext().getBean(FakeJavaMailSender.class).clearMessage();
     }
 
     @Test
@@ -117,9 +132,8 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
 
         assertEquals(Origin.UNKNOWN, getWebApplicationContext().getBean(JdbcTemplate.class).queryForObject("SELECT origin FROM users WHERE username='" + email + "'", String.class));
 
-        FakeJavaMailSender sender = getWebApplicationContext().getBean(FakeJavaMailSender.class);
-        assertEquals(1, sender.getSentMessages().size());
-        MimeMessageWrapper message = sender.getSentMessages().get(0);
+        assertEquals(1, fakeJavaMailSender.getSentMessages().size());
+        MimeMessageWrapper message = fakeJavaMailSender.getSentMessages().get(0);
         return message;
     }
 
