@@ -19,6 +19,7 @@ import org.cloudfoundry.identity.uaa.login.util.FakeJavaMailSender;
 import org.cloudfoundry.identity.uaa.login.util.FakeJavaMailSender.MimeMessageWrapper;
 import org.cloudfoundry.identity.uaa.mock.InjectedMockContextTest;
 import org.cloudfoundry.identity.uaa.mock.util.MockMvcUtils;
+import org.cloudfoundry.identity.uaa.mock.util.MockMvcUtils.IdentityZoneCreationResult;
 import org.cloudfoundry.identity.uaa.scim.ScimUser;
 import org.junit.After;
 import org.junit.Before;
@@ -48,6 +49,7 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
     private JavaMailSender originalSender;
     private FakeJavaMailSender fakeJavaMailSender = new FakeJavaMailSender();
     private RandomValueStringGenerator generator = new RandomValueStringGenerator();
+    private MockMvcUtils utils = MockMvcUtils.utils();
 
     @Before
     public void setUpFakeMailServer() throws Exception {
@@ -64,13 +66,14 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
     @After
     public void clearOutCodeTable() {
         getWebApplicationContext().getBean(JdbcTemplate.class).update("DELETE FROM expiring_code_store");
+        fakeJavaMailSender.clearMessage();
     }
 
     @Test
     public void ensure_that_newly_created_user_has_origin_UNKNOWN() throws Exception {
         String username = new RandomValueStringGenerator().generate()+"@test.org";
         AccountCreationService svc = getWebApplicationContext().getBean(AccountCreationService.class);
-        ScimUser user = svc.createUser(username, "password");
+        ScimUser user = svc.createUser(username, "password", Origin.UNKNOWN);
         assertEquals(Origin.UNKNOWN, user.getOrigin());
         assertFalse(user.isVerified());
     }
@@ -87,8 +90,8 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
         MimeMessageWrapper message = inviteUser(email);
         String code = extractInvitationCode(message.getContentString());
         String acceptContent = getMockMvc().perform(get("/invitations/accept")
-            .param("code", code)
-            .accept(MediaType.TEXT_HTML)
+                .param("code", code)
+                .accept(MediaType.TEXT_HTML)
         )
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Email: " + email)))
@@ -102,6 +105,8 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
 
     @Test
     public void invite_user_show_correct_saml_idp_for_acceptance() throws Exception {
+        IdentityZoneCreationResult zone = utils.createOtherIdentityZoneAndReturnResult(generator.generate(), getMockMvc(), getWebApplicationContext(),null);
+
 
     }
 

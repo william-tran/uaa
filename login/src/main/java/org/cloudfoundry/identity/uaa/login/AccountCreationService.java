@@ -12,7 +12,7 @@ public interface AccountCreationService {
 
     void resendVerificationCode(String email, String clientId);
 
-    ScimUser createUser(String username, String password);
+    ScimUser createUser(String username, String password, String origin);
 
     class ExistingUserResponse {
         @JsonProperty

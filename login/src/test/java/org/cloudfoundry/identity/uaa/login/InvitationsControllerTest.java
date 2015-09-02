@@ -292,7 +292,7 @@ public class InvitationsControllerTest {
             .andExpect(status().isUnprocessableEntity())
             .andExpect(model().attribute("error_message", "Msg 1c Msg 2c"))
             .andExpect(view().name("invitations/accept_invite"));
-        verify(invitationsService, never()).acceptInvitation(anyString(), anyString(), anyString(), anyString());
+        verify(invitationsService, never()).acceptInvitation(anyString(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -303,7 +303,7 @@ public class InvitationsControllerTest {
             .andExpect(status().isFound())
             .andExpect(redirectedUrl("/home"));
 
-        verify(invitationsService).acceptInvitation("user-id-001","user@example.com", "passw0rd", "");
+        verify(invitationsService).acceptInvitation("user-id-001","user@example.com", "passw0rd", "", Origin.UAA);
     }
 
     public MockHttpServletRequestBuilder startAcceptInviteFlow(String password) {
@@ -324,7 +324,7 @@ public class InvitationsControllerTest {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(uaaPrincipal, null, UaaAuthority.USER_AUTHORITIES);
         SecurityContextHolder.getContext().setAuthentication(token);
 
-        when(invitationsService.acceptInvitation("user-id-001", "user@example.com", "password", "app")).thenReturn("http://localhost:8080/app");
+        when(invitationsService.acceptInvitation("user-id-001", "user@example.com", "password", "app", Origin.UAA)).thenReturn("http://localhost:8080/app");
 
         MockHttpServletRequestBuilder post = post("/invitations/accept.do")
             .param("password", "password")
@@ -343,7 +343,7 @@ public class InvitationsControllerTest {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(uaaPrincipal, null, UaaAuthority.USER_AUTHORITIES);
         SecurityContextHolder.getContext().setAuthentication(token);
 
-        when(invitationsService.acceptInvitation("user-id-001", "user@example.com", "password", "app")).thenReturn("http://localhost:8080/app");
+        when(invitationsService.acceptInvitation("user-id-001", "user@example.com", "password", "app", Origin.UAA)).thenReturn("http://localhost:8080/app");
 
         MockHttpServletRequestBuilder post = post("/invitations/accept.do")
             .param("password", "password")

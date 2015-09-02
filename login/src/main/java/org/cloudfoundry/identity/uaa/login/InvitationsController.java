@@ -206,7 +206,7 @@ public class InvitationsController {
             model.addAttribute("email", principal.getEmail());
             return handleUnprocessableEntity(model, servletResponse, "error_message", e.getMessagesAsOneString(), "invitations/accept_invite");
         }
-        String redirectLocation = invitationsService.acceptInvitation(principal.getId(), principal.getEmail(), password, clientId);
+        String redirectLocation = invitationsService.acceptInvitation(principal.getId(), principal.getEmail(), password, clientId, Origin.UAA);
 
         if (!redirectUri.equals("")) {
             return "redirect:" + redirectUri;

@@ -203,7 +203,7 @@ public class EmailInvitationsServiceTests {
         clientDetails.addAdditionalInformation("invitation_redirect_url", "http://example.com/redirect");
         when(scimUserProvisioning.retrieve(eq("user-id-001"))).thenReturn(user);
         when(clientAdminEndpoints.getClientDetails(eq("app"))).thenReturn(clientDetails);
-        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "app");
+        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "app", Origin.UAA);
 
         Mockito.verifyZeroInteractions(expiringCodeService);
         assertEquals("http://example.com/redirect", redirectLocation);
@@ -215,7 +215,7 @@ public class EmailInvitationsServiceTests {
         ScimUser user = new ScimUser("user-id-001", "user@example.com", "first", "last");
         when(scimUserProvisioning.retrieve(eq("user-id-001"))).thenReturn(user);
 
-        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "");
+        String redirectLocation = emailInvitationsService.acceptInvitation("user-id-001", "user@example.com", "secret", "", Origin.UAA);
         Mockito.verifyZeroInteractions(expiringCodeService);
         assertNull(redirectLocation);
     }
@@ -245,7 +245,7 @@ public class EmailInvitationsServiceTests {
         @Bean
         AccountCreationService accountCreationService() {
             AccountCreationService svc =  mock(AccountCreationService.class);
-            when(svc.createUser(anyString(), anyString())).thenAnswer(createUserArgs());
+            when(svc.createUser(anyString(), anyString(), anyString())).thenAnswer(createUserArgs());
             return svc;
         }
 
@@ -270,8 +270,9 @@ public class EmailInvitationsServiceTests {
             @Override
             public ScimUser answer(InvocationOnMock invocation) throws Throwable {
                 String email = invocation.getArguments()[0].toString();
+                String origin = invocation.getArguments()[2].toString();
                 ScimUser user = new ScimUser("existing-user-id", email, "fname", "lname");
-                user.setOrigin(Origin.UAA);
+                user.setOrigin(origin);
                 user.setPrimaryEmail(user.getUserName());
                 if (email.contains("alreadyverified")) {
                     Map<String, Object> extraInfoVerified = new HashMap<>();
