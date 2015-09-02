@@ -27,8 +27,10 @@ import org.junit.Test;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,14 +91,27 @@ public class InvitationsServiceMockMvcTests extends InjectedMockContextTest {
         String email = new RandomValueStringGenerator().generate()+"@test.org";
         MimeMessageWrapper message = inviteUser(email);
         String code = extractInvitationCode(message.getContentString());
-        String acceptContent = getMockMvc().perform(get("/invitations/accept")
+        MvcResult result = getMockMvc().perform(get("/invitations/accept")
                 .param("code", code)
                 .accept(MediaType.TEXT_HTML)
         )
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Email: " + email)))
-            .andReturn().getResponse().getContentAsString();
-        System.out.println("acceptContent = " + acceptContent);
+            .andReturn();
+
+        assertEquals(Origin.UNKNOWN, getWebApplicationContext().getBean(JdbcTemplate.class).queryForObject("select origin from users where username=?", new Object[] {email}, String.class));
+
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        getMockMvc().perform(post("/invitations/accept.do")
+            .session(session)
+            .param("password", "s3cret")
+            .param("password_confirmation", "s3cret")
+            .with(csrf()))
+            .andExpect(status().isFound())
+            .andExpect(redirectedUrl("/home"))
+            .andReturn();
+
+        assertEquals(Origin.UAA, getWebApplicationContext().getBean(JdbcTemplate.class).queryForObject("select origin from users where username=?", new Object[] {email}, String.class));
     }
 
 

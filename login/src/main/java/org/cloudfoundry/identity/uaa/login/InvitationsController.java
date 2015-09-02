@@ -188,8 +188,8 @@ public class InvitationsController {
     @RequestMapping(value = "/accept.do", method = POST)
     public String acceptInvitation(@RequestParam("password") String password,
                                    @RequestParam("password_confirmation") String passwordConfirmation,
-                                   @RequestParam("client_id") String clientId,
-                                   @RequestParam("redirect_uri") String redirectUri,
+                                   @RequestParam(value = "client_id", required = false, defaultValue = "") String clientId,
+                                   @RequestParam(value = "redirect_uri", required = false, defaultValue = "") String redirectUri,
                                    Model model, HttpServletResponse servletResponse) throws IOException {
 
         PasswordConfirmationValidation validation = new PasswordConfirmationValidation(password, passwordConfirmation);
