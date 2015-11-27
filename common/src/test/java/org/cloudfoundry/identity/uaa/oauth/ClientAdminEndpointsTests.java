@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.cloudfoundry.identity.uaa.authorization.JwtBearerTokenGranter;
 import org.cloudfoundry.identity.uaa.error.UaaException;
 import org.cloudfoundry.identity.uaa.oauth.ClientDetailsValidator.Mode;
 import org.cloudfoundry.identity.uaa.oauth.approval.ApprovalStore;
@@ -331,13 +332,65 @@ public class ClientAdminEndpointsTests {
         detail.setAuthorizedGrantTypes(Arrays.asList("client_credentials"));
         endpoints.createClientDetails(detail);
     }
+    
+    @Test
+    public void testCreateClientDetailsWithPasswordGrantAsAdmin() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList("password"));
+        SecurityContextAccessor sca = mock(SecurityContextAccessor.class);
+        when(sca.isAdmin()).thenReturn(true);
+        setSecurityContextAccessor(sca);
+
+        endpoints.createClientDetails(input);
+
+        detail.setAuthorizedGrantTypes(Arrays.asList("password", "refresh_token"));
+        Mockito.verify(clientRegistrationService).addClientDetails(detail);
+    }
+    
+    @Test(expected = InvalidClientDetailsException.class)
+    public void testCreateClientDetailsWithPasswordGrantNonAdmin() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList("password"));
+        endpoints.createClientDetails(input);
+    }
+
+    @Test
+    public void testCreateClientDetailsWithJwtBearerGrantAsAdmin() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList(JwtBearerTokenGranter.GRANT_TYPE));
+        SecurityContextAccessor sca = mock(SecurityContextAccessor.class);
+        when(sca.isAdmin()).thenReturn(true);
+        setSecurityContextAccessor(sca);
+
+        endpoints.createClientDetails(input);
+
+        detail.setAuthorizedGrantTypes(Arrays.asList(JwtBearerTokenGranter.GRANT_TYPE));
+        Mockito.verify(clientRegistrationService).addClientDetails(detail);
+    }
 
     @Test(expected = InvalidClientDetailsException.class)
-    public void testCreateClientDetailsWithPasswordGrant() throws Exception {
-        input.setAuthorizedGrantTypes(Arrays.asList("password"));
-        ClientDetails result = endpoints.createClientDetails(input);
-        assertNull(result.getClientSecret());
-        Mockito.verify(clientRegistrationService).addClientDetails(detail);
+    public void testCreateClientDetailsWithJwtBearerGrantNonAdmin() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList(JwtBearerTokenGranter.GRANT_TYPE));
+        endpoints.createClientDetails(input);
+    }
+
+    @Test(expected = InvalidClientDetailsException.class)
+    public void testCreateClientDetailsWithJwtBearerEmptySecret() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList(JwtBearerTokenGranter.GRANT_TYPE));
+        input.setClientSecret("");
+        SecurityContextAccessor sca = mock(SecurityContextAccessor.class);
+        when(sca.isAdmin()).thenReturn(true);
+        setSecurityContextAccessor(sca);
+
+        endpoints.createClientDetails(input);
+    }
+
+    @Test(expected = InvalidClientDetailsException.class)
+    public void testCreateClientDetailsWithJwtBearerNullSecret() throws Exception {
+        input.setAuthorizedGrantTypes(Arrays.asList(JwtBearerTokenGranter.GRANT_TYPE));
+        input.setClientSecret(null);
+        SecurityContextAccessor sca = mock(SecurityContextAccessor.class);
+        when(sca.isAdmin()).thenReturn(true);
+        setSecurityContextAccessor(sca);
+
+        endpoints.createClientDetails(input);
     }
 
     @Test

@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.cloudfoundry.identity.uaa.oauth;
 
+import org.cloudfoundry.identity.uaa.authentication.Origin;
+import org.cloudfoundry.identity.uaa.authorization.JwtBearerTokenGranter;
 import org.cloudfoundry.identity.uaa.oauth.client.ClientConstants;
+import org.cloudfoundry.identity.uaa.oauth.token.UaaTokenServices;
 import org.cloudfoundry.identity.uaa.security.DefaultSecurityContextAccessor;
 import org.cloudfoundry.identity.uaa.security.SecurityContextAccessor;
 import org.cloudfoundry.identity.uaa.user.UaaUser;
@@ -30,6 +33,7 @@ import org.springframework.security.oauth2.common.util.OAuth2Utils;
 import org.springframework.security.oauth2.provider.AuthorizationRequest;
 import org.springframework.security.oauth2.provider.ClientDetails;
 import org.springframework.security.oauth2.provider.ClientDetailsService;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.OAuth2Request;
 import org.springframework.security.oauth2.provider.OAuth2RequestFactory;
 import org.springframework.security.oauth2.provider.TokenRequest;
@@ -81,13 +85,17 @@ public class UaaAuthorizationRequestManager implements OAuth2RequestFactory {
 
     private IdentityProviderProvisioning providerProvisioning;
 
+    private UaaTokenServices uaaTokenServices;
+
     public UaaAuthorizationRequestManager(ClientDetailsService clientDetailsService,
                                           UaaUserDatabase userDatabase,
-                                          IdentityProviderProvisioning providerProvisioning) {
+                                          IdentityProviderProvisioning providerProvisioning,
+                                          UaaTokenServices uaaTokenServices) {
         this.clientDetailsService = clientDetailsService;
         this.uaaUserDatabase = userDatabase;
         this.requestFactory = new DefaultOAuth2RequestFactory(clientDetailsService);
         this.providerProvisioning = providerProvisioning;
+        this.uaaTokenServices = uaaTokenServices;
     }
 
     /**
@@ -402,24 +410,35 @@ public class UaaAuthorizationRequestManager implements OAuth2RequestFactory {
             }
         }
         if (!clientCredentials) {
-            Set<String> userScopes = getUserScopes();
+            Set<String> userScopes = getUserScopes(requestParameters);
             scopes = intersectScopes(scopes, clientDetails.getScope(), userScopes);
         }
         return scopes;
     }
 
-    protected Set<String> getUserScopes() {
+    protected Set<String> getUserScopes(Map<String, String> requestParameters) {
         Set<String> scopes = new HashSet<>();
+        String userId = null;
         if (securityContextAccessor.isUser()) {
-            String userId = securityContextAccessor.getUserId();
-            Collection<? extends GrantedAuthority> authorities = uaaUserDatabase != null ?
+            userId = securityContextAccessor.getUserId();
+        } else if (requestParameters != null && JwtBearerTokenGranter.GRANT_TYPE.equals(requestParameters.get(OAuth2Utils.GRANT_TYPE))) {
+            OAuth2Authentication authOfToken = uaaTokenServices.loadAuthentication(requestParameters
+                    .get(JwtBearerTokenGranter.TOKEN_PARAM));
+            userId = Origin.getUserId(authOfToken);
+        } else {
+            return scopes;
+        }
+        Collection<? extends GrantedAuthority> authorities = uaaUserDatabase != null ?
                 uaaUserDatabase.retrieveUserById(userId).getAuthorities() :
                 securityContextAccessor.getAuthorities();
-            for (GrantedAuthority a : authorities) {
-                scopes.add(a.getAuthority());
-            }
+        for (GrantedAuthority a : authorities) {
+            scopes.add(a.getAuthority());
         }
         return scopes;
+    }
+
+    protected Set<String> getUserScopes() {
+        return getUserScopes(null);
     }
 
     @Override

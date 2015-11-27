@@ -39,7 +39,14 @@
         <oauth:refresh-token />
         <oauth:client-credentials />
         <oauth:password authentication-manager-ref="compositeAuthenticationManager" />
+        <oauth:custom-grant token-granter-ref="jwtBearerTokenGranter" />
     </oauth:authorization-server>
+
+    <bean id="jwtBearerTokenGranter" class="org.cloudfoundry.identity.uaa.authorization.JwtBearerTokenGranter">
+        <constructor-arg index="0" ref="tokenServices"/>
+        <constructor-arg index="1" ref="jdbcClientDetailsService"/>
+        <constructor-arg index="2" ref="authorizationRequestManager"/>
+    </bean>
 
     <!-- Owner password flow for external authentication (SAML) -->
     <!-- Pattern: /oauth/token parameters:{grant_type=password,passcode= -->
@@ -294,6 +301,7 @@
         <constructor-arg ref="jdbcClientDetailsService" />
         <constructor-arg ref="userDatabase"/>
         <constructor-arg ref="identityProviderProvisioning"/>
+        <constructor-arg ref="tokenServices"/>
         <property name="defaultScopes" ref="defaultUserAuthorities" />
     </bean>
 

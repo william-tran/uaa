@@ -14,6 +14,9 @@
 package org.cloudfoundry.identity.uaa.oauth;
 
 import org.cloudfoundry.identity.uaa.oauth.client.ClientConstants;
+import org.cloudfoundry.identity.uaa.oauth.token.UaaTokenServices;
+import org.cloudfoundry.identity.uaa.authentication.UaaPrincipal;
+import org.cloudfoundry.identity.uaa.authorization.JwtBearerTokenGranter;
 import org.cloudfoundry.identity.uaa.constants.OriginKeys;
 import org.cloudfoundry.identity.uaa.security.SecurityContextAccessor;
 import org.cloudfoundry.identity.uaa.security.StubSecurityContextAccessor;
@@ -27,6 +30,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.common.exceptions.InvalidScopeException;
@@ -34,6 +39,7 @@ import org.springframework.security.oauth2.common.exceptions.UnauthorizedClientE
 import org.springframework.security.oauth2.common.util.OAuth2Utils;
 import org.springframework.security.oauth2.provider.AuthorizationRequest;
 import org.springframework.security.oauth2.provider.ClientDetailsService;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.OAuth2Request;
 import org.springframework.security.oauth2.provider.client.BaseClientDetails;
 import org.springframework.util.StringUtils;
@@ -70,10 +76,15 @@ public class UaaAuthorizationRequestManagerTests {
 
     private UaaUser user = null;
 
+    private UaaTokenServices uaaTokenServices = mock(UaaTokenServices.class);
+
+    private String token = "SOMETOKEN";
+
     @Before
     public void initUaaAuthorizationRequestManagerTests() {
         parameters.put("client_id", "foo");
-        factory = new UaaAuthorizationRequestManager(clientDetailsService, uaaUserDatabase, providerProvisioning);
+        factory = new UaaAuthorizationRequestManager(clientDetailsService, uaaUserDatabase, providerProvisioning,
+                uaaTokenServices);
         factory.setSecurityContextAccessor(new StubSecurityContextAccessor());
         when(clientDetailsService.loadClientByClientId("foo")).thenReturn(client);
         user = new UaaUser("testid", "testuser","","test@test.org",AuthorityUtils.commaSeparatedStringToAuthorityList("foo.bar,spam.baz,space.1.developer,space.2.developer,space.1.admin"),"givenname", "familyname", null, null, OriginKeys.UAA, null, true, IdentityZone.getUaa().getId(), "testid", new Date());
@@ -146,6 +157,75 @@ public class UaaAuthorizationRequestManagerTests {
         OAuth2Request request = factory.createTokenRequest(parameters, client).createOAuth2Request(client);
         assertEquals(StringUtils.commaDelimitedListToSet("aud1.test,aud2.test"), new TreeSet<>(request.getScope()));
         assertEquals(StringUtils.commaDelimitedListToSet("aud1,aud2"), new TreeSet<>(request.getResourceIds()));
+    }
+
+    @Test
+    public void testJwtBearerTokenWildcardRequest() {
+        setupJwtBearerTokenRequest("space.*.developer");
+        String clientScope = "space.1.developer,space.2.developer";
+        setupJwtBearerClient(clientScope);
+        setupAuthenticationContainedInToken();
+
+        OAuth2Request request = factory.createTokenRequest(parameters, client).createOAuth2Request(client);
+
+        assertEquals(StringUtils.commaDelimitedListToSet(clientScope), new TreeSet<String>(request.getScope()));
+    }
+
+    @Test
+    public void testJwtBearerTokenRequestFailsWhenClientScopeMissing() {
+        setupJwtBearerTokenRequest("space.1.developer");
+        String clientScope = "space.2.developer";
+        setupJwtBearerClient(clientScope);
+        setupAuthenticationContainedInToken();
+
+        OAuth2Request request = factory.createTokenRequest(parameters, client).createOAuth2Request(client);
+
+        assertTrue(request.getScope().isEmpty());
+    }
+
+    @Test
+    public void testJwtBearerTokenRequestFailsWhenUserAuthorityMissing() {
+        setupJwtBearerTokenRequest("space.99.developer");
+        String clientScope = "space.99.developer";
+        setupJwtBearerClient(clientScope);
+        setupAuthenticationContainedInToken();
+
+        OAuth2Request request = factory.createTokenRequest(parameters, client).createOAuth2Request(client);
+
+        assertTrue(request.getScope().isEmpty());
+    }
+
+    private void setupAuthenticationContainedInToken() {
+        // set up the original user whose identity is in the token
+        AuthorizationRequest authorizationRequest = new AuthorizationRequest("original_client", Arrays.asList(
+                "foo.bar", "spam.baz"));
+        authorizationRequest.setResourceIds(new HashSet<>(Arrays.asList("foo", "spam")));
+        Map<String, String> azParameters = new HashMap<>(authorizationRequest.getRequestParameters());
+        azParameters.put("authorization_code", "12345");
+        authorizationRequest.setRequestParameters(azParameters);
+        Authentication userAuthentication = new UsernamePasswordAuthenticationToken(new UaaPrincipal(user), "n/a", null);
+        OAuth2Authentication auth = new OAuth2Authentication(authorizationRequest.createOAuth2Request(),
+                userAuthentication);
+        when(uaaTokenServices.loadAuthentication(token)).thenReturn(auth);
+    }
+
+    private void setupJwtBearerClient(String clientScope) {
+        client.setScope(StringUtils.commaDelimitedListToSet(clientScope));
+
+        SecurityContextAccessor securityContextAccessor = new StubSecurityContextAccessor() {
+            @Override
+            public boolean isUser() {
+                return false;
+            }
+        };
+        factory.setSecurityContextAccessor(securityContextAccessor);
+    }
+
+    private void setupJwtBearerTokenRequest(String scope) {
+        parameters.put("client_id", client.getClientId());
+        parameters.put(OAuth2Utils.GRANT_TYPE, JwtBearerTokenGranter.GRANT_TYPE);
+        parameters.put(JwtBearerTokenGranter.TOKEN_PARAM, token);
+        parameters.put("scope", scope);
     }
 
     @Test

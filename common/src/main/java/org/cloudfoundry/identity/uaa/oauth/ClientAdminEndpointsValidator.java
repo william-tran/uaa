@@ -21,6 +21,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cloudfoundry.identity.uaa.constants.OriginKeys;
+import org.cloudfoundry.identity.uaa.authorization.JwtBearerTokenGranter;
 import org.cloudfoundry.identity.uaa.rest.QueryableResourceManager;
 import org.cloudfoundry.identity.uaa.security.DefaultSecurityContextAccessor;
 import org.cloudfoundry.identity.uaa.security.SecurityContextAccessor;
@@ -36,9 +37,10 @@ public class ClientAdminEndpointsValidator implements InitializingBean, ClientDe
     private final Log logger = LogFactory.getLog(getClass());
 
     private static final Set<String> VALID_GRANTS = new HashSet<String>(Arrays.asList("implicit", "password",
-                    "client_credentials", "authorization_code", "refresh_token"));
+            "client_credentials", "authorization_code", "refresh_token", JwtBearerTokenGranter.GRANT_TYPE));
 
-    private static final Collection<String> NON_ADMIN_INVALID_GRANTS = new HashSet<String>(Arrays.asList("password"));
+    private static final Collection<String> NON_ADMIN_INVALID_GRANTS = new HashSet<String>(Arrays.asList("password",
+            JwtBearerTokenGranter.GRANT_TYPE));
 
     private static final Collection<String> NON_ADMIN_VALID_AUTHORITIES = new HashSet<String>(Arrays.asList("uaa.none"));
 
@@ -207,11 +209,12 @@ public class ClientAdminEndpointsValidator implements InitializingBean, ClientDe
         }
         if (create) {
             // Only check for missing secret if client is being created.
-            if ((requestedGrantTypes.contains("client_credentials") || requestedGrantTypes
-                            .contains("authorization_code"))
+            if ((requestedGrantTypes.contains("client_credentials")
+                    || requestedGrantTypes.contains("authorization_code")
+                    || requestedGrantTypes.contains(JwtBearerTokenGranter.GRANT_TYPE))
                             && !StringUtils.hasText(client.getClientSecret())) {
                 throw new InvalidClientDetailsException(
-                                "Client secret is required for client_credentials and authorization_code grant types");
+                        "Client secret is required for client_credentials, authorization_code, and jwt-bearer grant types");
             }
         }
 

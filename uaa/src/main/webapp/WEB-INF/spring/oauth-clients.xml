@@ -75,7 +75,7 @@
                             <entry key="secret" value="appclientsecret" />
                             <entry key="authorized-grant-types" value="password,implicit,authorization_code,client_credentials" />
                             <entry key="scope"
-                                value="cloud_controller.read,cloud_controller.write,openid,password.write,scim.userids,organizations.acme" />
+                                value="cloud_controller.read,cloud_controller.write,openid,password.write,scim.userids,organizations.acme,api.read" />
                             <entry key="authorities" value="uaa.resource" />
                             <entry key="autoapprove">
                                 <list>
@@ -164,7 +164,15 @@
                             <entry key="authorities" value="uaa.resource" />
                         </map>
                     </entry>
-
+                    <entry key="api">
+                        <map>
+                            <entry key="id" value="api" />
+                            <entry key="secret" value="secret" />
+                            <entry key="authorized-grant-types" value="urn:ietf:params:oauth:grant-type:jwt-bearer" />
+                            <entry key="scope" value="scim.userids" />
+                            <entry key="authorities" value="uaa.resource" />
+                        </map>
+                    </entry>
                 </map>
             </property>
         </bean>
