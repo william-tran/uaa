@@ -421,7 +421,7 @@ public class UaaTokenServices implements AuthorizationServerTokenServices, Resou
                     }
                 }
                 clone.put(SCOPE, idTokenScopes);
-                clone.put(AUD, new HashSet(Arrays.asList(aud)));
+                clone.put(AUD, new HashSet<String>(Arrays.asList(aud, getTokenEndpoint())));
 
                 if (scopes.contains(ROLES) && (externalGroupsForIdToken != null && !externalGroupsForIdToken.isEmpty())) {
                     clone.put(ROLES, externalGroupsForIdToken);

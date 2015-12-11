@@ -57,8 +57,9 @@ public class JwtBearerTokenGranter extends AbstractTokenGranter {
         }
 
         OAuth2Authentication authentication = uaaTokenServices.loadAuthentication(jwtToken);
-        if (!authentication.getOAuth2Request().getResourceIds().contains(tokenRequest.getClientId())) {
-            throw new InvalidClientException("aud of assertion must contain the requesting client_id");
+        if (!authentication.getOAuth2Request().getResourceIds().contains(uaaTokenServices.getTokenEndpoint())) {
+            throw new InvalidClientException(
+                    "The JWT MUST contain an 'aud' (audience) claim containing a value that identifies the authorization server as an intended audience.");
         }
         OAuth2Request storedOAuth2Request = getRequestFactory().createOAuth2Request(client, tokenRequest);
         return new OAuth2Authentication(storedOAuth2Request, authentication);

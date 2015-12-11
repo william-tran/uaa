@@ -348,6 +348,11 @@ public class UaaAuthorizationRequestManager implements OAuth2RequestFactory {
         if (clientDetails.getClientId()!=null) {
             resourceIds.add(clientDetails.getClientId());
         }
+
+        //to support token exchange with the JWT bearer grant type
+        //https://tools.ietf.org/html/rfc7523#section-3
+        resourceIds.add(uaaTokenServices.getTokenEndpoint());
+
         for (String scope : scopes) {
             if (scopeToResource.containsKey(scope)) {
                 resourceIds.add(scopeToResource.get(scope));

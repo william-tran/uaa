@@ -45,6 +45,8 @@ public class JwtBearerGrantIntegrationTests {
                 testAccounts.getPassword());
         String accessToken = responseEntity.getBody().get("access_token").toString();
         assertEquals(HttpStatus.OK, makeJwtBearerGrantRequest(accessToken).getStatusCode());
+        String idToken = responseEntity.getBody().get("id_token").toString();
+        assertEquals(HttpStatus.OK, makeJwtBearerGrantRequest(idToken).getStatusCode());
 
     }
 
@@ -57,7 +59,8 @@ public class JwtBearerGrantIntegrationTests {
         params.add("grant_type", "password");
         params.add("username", userName);
         params.add("password", password);
-        params.add("scope", "api.read");
+        params.add("scope", "openid api.read");
+        params.add("response_type", "id_token token");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
